@@ -34,9 +34,8 @@ const CollapsibleSide = ({ children }: CommonProps) => {
                         }
                         headerEnd={
                             <>
-                                <LanguageSelector />
                                 <Notification />
-                                <SidePanel />
+
                                 <UserProfileDropdown hoverable={false} />
                             </>
                         }

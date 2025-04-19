@@ -182,7 +182,7 @@ const navigationIcon: NavigationIcons = {
     resetPassword: <PiKeyholeDuotone />,
     otpVerification: <PiPasswordDuotone />,
     dashboard: <PiSpeedometerDuotone />,
-    dashboardEcommerce: <PiShoppingCartSimpleDuotone />,
+    dashboardEcommerce: <PiChartBarDuotone />,
     dashboardProject: <PiRocketDuotone />,
     dashboardAnalytic: <PiChartBarDuotone />,
     dashboardMarketing: <PiMegaphoneDuotone />,
@@ -191,6 +191,7 @@ const navigationIcon: NavigationIcons = {
     utilsDoc: <PiToolboxDuotone />,
     changeLog: <PiCodeDuotone />,
     dashboardNetworkMonitor: <PiSpeedometerDuotone />,
+    netFailurePrediction: <PiChartLineUpDuotone />,
 }
 
 export default navigationIcon
