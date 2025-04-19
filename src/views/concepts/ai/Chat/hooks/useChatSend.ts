@@ -11,6 +11,7 @@ const useChatSend = () => {
         pushChatHistory,
         pushConversation,
         setIsTyping,
+        chatHistory,
     } = usGenerativeChatStore()
 
     const creteMyMessage = (id: string, prompt: string) => {
@@ -33,10 +34,16 @@ const useChatSend = () => {
         prompt: string,
         attachments?: File[],
     ) => {
+        // Get conversation history for the current chat
+        const currentChat = chatHistory.find((chat) => chat.id === id)
+        const conversationHistory = currentChat?.conversation || []
+
         const resp = await apiPostChat<PostAiChatResponse>({
             prompt,
             attachments,
+            history: conversationHistory,
         })
+
         pushConversation(id, {
             id: uniqueId('ai-conversation-'),
             sender: {
