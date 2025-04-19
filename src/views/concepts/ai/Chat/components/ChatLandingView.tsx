@@ -21,28 +21,27 @@ const promptSuggestion: {
     prompt: string
     type: PromptType
 }[] = [
-    {
-        title: 'Help me sound like an expert for an upcoming trip',
-        prompt: `I'm going whale watching this weekend and want to appear knowledgeable about killer whales. Tell me a few unique and interesting facts I can share.`,
-        type: 'guide',
-    },
-    {
-        title: 'Outline an logical sales pitch for a new product',
-        prompt: `Structure a sales pitch for a hair dryer that's also a microphone. Be concise and organize the sales pitch logically. `,
-        type: 'writing',
-    },
-    {
-        title: 'Help me get organized with a list of 10 tips',
-        prompt: `Give me 10 tips for room organization. `,
-        type: 'idea',
-    },
-    {
-        title: 'Write code for a specific task, including edge cases',
-        prompt: `Write a Java function that takes a path as an input and creates a file storing the current system date. Consider edge cases.`,
-        type: 'coding',
-    },
-]
-
+        {
+            title: 'Explain how mobile networks handle congestion',
+            prompt: `Explain how mobile networks manage congestion during peak hours, and provide examples of techniques used to optimize performance.`,
+            type: 'guide',
+        },
+        {
+            title: 'Draft a sales pitch for Djezzy’s 5G services',
+            prompt: `Create a compelling sales pitch for Djezzy's 5G services, highlighting its benefits for businesses and individual users.`,
+            type: 'writing',
+        },
+        {
+            title: 'Provide innovative ideas for improving network coverage',
+            prompt: `Suggest innovative ideas to improve mobile network coverage in rural and urban areas, considering cost-effectiveness and scalability.`,
+            type: 'idea',
+        },
+        {
+            title: 'Write code to simulate network latency',
+            prompt: `Write a Python script to simulate network latency in a mobile network. Include options for different latency scenarios and edge cases.`,
+            type: 'coding',
+        },
+    ]
 const ChatLandingView = () => {
     const { handleSend } = useChatSend()
 

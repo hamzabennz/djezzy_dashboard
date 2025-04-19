@@ -10,7 +10,6 @@ const GenerativeChat = () => {
         <div className="h-full">
             <div className="flex flex-auto gap-4 h-full">
                 <ChatView />
-                {larger.xl && <ChatSideNav />}
                 <ChatHistoryRenameDialog />
             </div>
         </div>

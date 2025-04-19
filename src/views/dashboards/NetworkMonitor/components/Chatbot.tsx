@@ -1,54 +1,84 @@
-import React, { useState } from 'react'
-import { MessageSquare, X, CornerDownLeft, Loader } from 'lucide-react'
+import React, { useState, useRef, useEffect } from 'react';
+import { MessageSquare, X, CornerDownLeft, Loader } from 'lucide-react';
+import { useTower } from '../context/TowerContext';
+
+// Import the API utils
+import { queryNetworkMonitorAI, Message } from '../utils/chatApi';
 
 const Chatbot: React.FC = () => {
-    const [isOpen, setIsOpen] = useState(false)
-    const [messages, setMessages] = useState<
-        { type: 'user' | 'bot'; content: string }[]
-    >([
+    const { towers } = useTower();
+    const [isOpen, setIsOpen] = useState(false);
+    const [messages, setMessages] = useState<Message[]>([
         {
-            type: 'bot',
-            content:
-                "Hello! I'm your AI assistant. How can I help you with tower monitoring today?",
+            role: 'model',
+            content: "Hello! I'm NetTowerGuard AI. How can I help you with tower monitoring today?"
         },
-    ])
-    const [inputValue, setInputValue] = useState('')
-    const [isLoading, setIsLoading] = useState(false)
+    ]);
+    const [inputValue, setInputValue] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const messagesEndRef = useRef<HTMLDivElement>(null);
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault()
+    // Auto-scroll to the bottom of messages
+    useEffect(() => {
+        if (messagesEndRef.current) {
+            messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+        }
+    }, [messages]);
 
-        if (!inputValue.trim()) return
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        if (!inputValue.trim()) return;
 
         // Add user message
-        setMessages((prev) => [...prev, { type: 'user', content: inputValue }])
-        setInputValue('')
+        const userMessage: Message = {
+            role: 'user',
+            content: inputValue
+        };
 
-        // Simulate AI response
-        setIsLoading(true)
-        setTimeout(() => {
-            // Example response
-            const responses = [
-                "I've analyzed the issue with Tower #4872. The failure is likely due to a power supply malfunction. Please dispatch a maintenance team for inspection. Estimated downtime: 3-4 hours.",
+        setMessages((prev) => [...prev, userMessage]);
+        setInputValue('');
+        setIsLoading(true);
 
-                'Based on the data, I recommend immediate maintenance for towers in the northwest sector. Weather conditions are deteriorating, which could affect signal strength by up to 35%.',
+        try {
+            // Get response from AI with conversation history for context
+            const aiResponse = await queryNetworkMonitorAI(
+                inputValue,
+                towers,
+                messages
+            );
 
-                "Tower #3956 is showing early warning signs of failure. The probability has increased to 78% in the last hour. Root cause appears to be an antenna alignment issue following yesterday's storm.",
-
-                "I've scheduled diagnostic tests for all at-risk towers. Results will be available in approximately 20 minutes. Would you like to prioritize any specific region?",
-            ]
-
+            // Add AI response to the messages
+            setMessages((prev) => [
+                ...prev,
+                { role: 'model', content: aiResponse }
+            ]);
+        } catch (error) {
+            console.error('Error getting AI response:', error);
             setMessages((prev) => [
                 ...prev,
                 {
-                    type: 'bot',
-                    content:
-                        responses[Math.floor(Math.random() * responses.length)],
-                },
-            ])
-            setIsLoading(false)
-        }, 1500)
-    }
+                    role: 'model',
+                    content: 'Sorry, I encountered an error processing your request. Please try again.'
+                }
+            ]);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // Handle quick action suggestions
+    const handleSuggestion = (suggestion: string) => {
+        setInputValue(suggestion);
+    };
+
+    // Suggested prompts
+    const suggestions = [
+        "Summarize the current network status",
+        "Which towers need urgent maintenance?",
+        "Predict potential failures in the next 24 hours",
+        "What's causing most tower failures?",
+    ];
 
     return (
         <>
@@ -68,7 +98,7 @@ const Chatbot: React.FC = () => {
                     {/* Header */}
                     <div className="bg-primary p-3 rounded-t-lg flex items-center justify-between">
                         <h3 className="font-medium text-white">
-                            Network AI Assistant
+                            NetTowerGuard AI
                         </h3>
                         <button
                             className="text-white/80 hover:text-white"
@@ -83,7 +113,7 @@ const Chatbot: React.FC = () => {
                         {messages.map((message, i) => (
                             <div
                                 key={i}
-                                className={`p-2 rounded-lg text-sm ${message.type === 'user'
+                                className={`p-2 rounded-lg text-sm ${message.role === 'user'
                                     ? 'bg-primary text-white ml-auto'
                                     : 'bg-gray-100 text-gray-800 mr-auto'
                                     } max-w-[80%]`}
@@ -98,7 +128,26 @@ const Chatbot: React.FC = () => {
                                 <span className="text-gray-800">Processing your request...</span>
                             </div>
                         )}
+                        <div ref={messagesEndRef} />
                     </div>
+
+                    {/* Suggested queries - shown when conversation is new */}
+                    {messages.length <= 1 && !isLoading && (
+                        <div className="px-3 pb-2">
+                            <p className="text-xs text-gray-500 mb-2">Try asking:</p>
+                            <div className="flex flex-wrap gap-2">
+                                {suggestions.map((suggestion, i) => (
+                                    <button
+                                        key={i}
+                                        className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded-md"
+                                        onClick={() => handleSuggestion(suggestion)}
+                                    >
+                                        {suggestion}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
                     {/* Input */}
                     <form
@@ -107,7 +156,7 @@ const Chatbot: React.FC = () => {
                     >
                         <input
                             type="text"
-                            placeholder="Report an issue or ask for help..."
+                            placeholder="Ask about tower monitoring..."
                             className="flex-1 bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
                             value={inputValue}
                             onChange={(e) => setInputValue(e.target.value)}
@@ -123,7 +172,7 @@ const Chatbot: React.FC = () => {
                 </div>
             )}
         </>
-    )
-}
+    );
+};
 
-export default Chatbot
+export default Chatbot;
