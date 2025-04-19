@@ -9,7 +9,7 @@ import classNames from '@/utils/classNames'
 import { COLOR_1, COLOR_2, COLOR_4 } from '@/constants/chart.constant'
 import { options } from '../constants'
 import { NumericFormat } from 'react-number-format'
-import { TbCoin, TbShoppingBagCheck, TbEye } from 'react-icons/tb'
+import { TbWifi, TbAlertTriangle, TbAntenna ,TbClock } from 'react-icons/tb'
 import type { ReactNode } from 'react'
 import type { StatisticData, Period, StatisticCategory } from '../types'
 
@@ -110,7 +110,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
     return (
         <Card>
             <div className="flex items-center justify-between">
-                <h4>Overview</h4>
+                <h4>Network Tower Status</h4>
                 <Select
                     className="w-[120px]"
                     size="sm"
@@ -129,55 +129,62 @@ const Overview = ({ data }: StatisticGroupsProps) => {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 rounded-2xl p-3 bg-gray-100 dark:bg-gray-700 mt-4">
                 <StatisticCard
-                    title="Total profit"
+                label='totalProfit'
+                    title="Network Uptime"
                     value={
                         <NumericFormat
                             displayType="text"
-                            value={data.totalProfit[selectedPeriod].value}
-                            prefix={'$'}
+                            value={"93"}
+                            suffix="%"
+                            decimalScale={2}
+                            fixedDecimalScale
                             thousandSeparator={true}
                         />
                     }
                     growShrink={data.totalProfit[selectedPeriod].growShrink}
-                    iconClass="bg-sky-200"
-                    icon={<TbCoin />}
-                    label="totalProfit"
+                    iconClass="bg-blue-200"
+                    icon={<TbWifi />}
+                    
                     active={selectedCategory === 'totalProfit'}
                     compareFrom={data.totalProfit[selectedPeriod].comparePeriod}
                     onClick={setSelectedCategory}
                 />
                 <StatisticCard
-                    title="Total order"
+                    title="Active Towers"
                     value={
                         <NumericFormat
                             displayType="text"
-                            value={data.totalOrder[selectedPeriod].value}
+                            value={"1186"}
                             thousandSeparator={true}
                         />
                     }
                     growShrink={data.totalOrder[selectedPeriod].growShrink}
-                    iconClass="bg-emerald-200"
-                    icon={<TbShoppingBagCheck />}
+                    iconClass="bg-green-200"
+                    icon={<TbAntenna />}
                     label="totalOrder"
                     active={selectedCategory === 'totalOrder'}
-                    compareFrom={data.totalProfit[selectedPeriod].comparePeriod}
+                    compareFrom={data.totalOrder[selectedPeriod].comparePeriod}
                     onClick={setSelectedCategory}
                 />
                 <StatisticCard
-                    title="Impression"
+                    title="Predicted Failures"
                     value={
-                        <AbbreviateNumber
-                            value={data.totalImpression[selectedPeriod].value}
+                        <NumericFormat
+                            displayType="text"
+                            value={"24"}
+                            suffix=" "
+                            thousandSeparator={true}
                         />
                     }
                     growShrink={data.totalImpression[selectedPeriod].growShrink}
-                    iconClass="bg-purple-200"
-                    icon={<TbEye />}
+                    iconClass="bg-red-200"
+                    icon={<TbAlertTriangle />}
                     label="totalImpression"
                     active={selectedCategory === 'totalImpression'}
-                    compareFrom={data.totalProfit[selectedPeriod].comparePeriod}
+                    compareFrom={data.totalImpression[selectedPeriod].comparePeriod}
                     onClick={setSelectedCategory}
                 />
+                
             </div>
             <Chart
                 type="line"
