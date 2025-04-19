@@ -1,3 +1,4 @@
+import react from '@vitejs/plugin-react'
 export type Variables =
     | 'primary'
     | 'primaryDeep'
@@ -92,12 +93,30 @@ const orangeTheme: ThemeVariables = {
     },
 }
 
+const redTheme: ThemeVariables = {
+    light: {
+        primary: '#FF0000',
+        primaryDeep: '#CC0000',
+        primaryMild: '#FF3333',
+        primarySubtle: '#FF00001a',
+        neutral: '#ffffff',
+    },
+    dark: {
+        primary: '#FF0000',
+        primaryDeep: '#CC0000',
+        primaryMild: '#FF3333',
+        primarySubtle: '#FF00001a',
+        neutral: '#ffffff',
+    },
+}
+
 const presetThemeSchemaConfig: Record<string, ThemeVariables> = {
     default: defaultTheme,
     dark: darkTheme,
     green: greenTheme,
     purple: purpleTheme,
     orange: orangeTheme,
+    red: redTheme,
 }
 
 export default presetThemeSchemaConfig

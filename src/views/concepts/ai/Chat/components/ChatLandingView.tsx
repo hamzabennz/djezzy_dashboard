@@ -50,7 +50,7 @@ const ChatLandingView = () => {
         <div className="max-w-[900px] w-full mx-auto mt-20">
             <div>
                 <div className="heading-text text-4xl leading-snug">
-                    <span className="font-semibold bg-gradient-to-r from-indigo-500 to-red-400 bg-clip-text text-transparent text-5xl">
+                    <span className="font-semibold bg-gradient-to-r from-red-500 to-red-400 bg-clip-text text-transparent text-5xl">
                         Hello, there
                     </span>
                     <br />
@@ -60,7 +60,7 @@ const ChatLandingView = () => {
                     {promptSuggestion.map((suggestion) => (
                         <div
                             key={suggestion.title}
-                            className="flex flex-col gap-4 justify-between rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 p-5 min-h-40 2xl:min-h-60 cursor-pointer"
+                            className="flex flex-col gap-4 justify-between rounded-xl bg-red-50 dark:bg-gray-700 hover:bg-red-100 dark:hover:bg-gray-600 p-5 min-h-40 2xl:min-h-60 cursor-pointer"
                             role="button"
                             onClick={() => handleSend(suggestion.title)}
                         >
