@@ -31,40 +31,64 @@ import {
 import { useState, useEffect } from 'react'
 import { TowerPredictionService } from '@/services/TowerPredictionService'
 import { towersData } from '@/mock/data/towersData'
-import { format } from 'date-fns'
+import { TowerPredictionResponse, DailyPredictions } from '@/types/prediction'
+import { format, eachDayOfInterval, startOfMonth, endOfMonth } from 'date-fns'
+import axios from 'axios'
 
 export const ProjectDashboard = () => {
+    console.log('towersData:', towersData)
+    const [predictions, setPredictions] = useState<DailyPredictions>({})
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
-    const [predictions, setPredictions] = useState<
-        Record<string, CalendarPrediction>
-    >({})
-    const [selectedDate, setSelectedDate] = useState<Date | null>(new Date())
-    // Add missing state declarations
     const [currentMonth, setCurrentMonth] = useState<Date>(new Date())
-    const [selectedDay, setSelectedDay] = useState<any>(null)
-
-    const predictionService = new TowerPredictionService()
+    const [selectedDay, setSelectedDay] = useState<string | null>(null)
 
     useEffect(() => {
-        fetchMonthlyPredictions()
-    }, [selectedDate])
+        fetchMonthPredictions()
+    }, [currentMonth])
 
-    const fetchMonthlyPredictions = async () => {
-        if (!selectedDate) return
-
+    const fetchMonthPredictions = async () => {
         setIsLoading(true)
-        try {
-            const startDate = format(selectedDate, 'yyyy-MM-01')
-            const endDate = format(selectedDate, 'yyyy-MM-dd')
+        setError(null)
 
-            const predictions = await predictionService.getBatchPredictions(
-                towersData,
-                startDate,
-                endDate,
+        const service = new TowerPredictionService()
+        const today = new Date()
+        const dateStr = format(today, 'yyyy-MM-dd')
+        const dailyPredictions: DailyPredictions = {}
+
+        try {
+            const predictions: TowerPredictionResponse[] = []
+
+            // Fetch predictions for each tower for today only
+            for (const towerId of towersData) {
+                const location = `Location_${towerId.slice(3)}`
+                const prediction = await service.getPrediction(
+                    towerId,
+                    location,
+                    dateStr,
+                )
+                predictions.push(prediction)
+            }
+
+            // Filter only failed predictions
+            const failedPredictions = predictions.filter(
+                (p) => p.predicted_failure,
             )
 
-            setPredictions(transformPredictionsForCalendar(predictions))
+            if (failedPredictions.length > 0) {
+                const maxProb = Math.max(
+                    ...failedPredictions.map((p) => p.failure_probability),
+                )
+                dailyPredictions[dateStr] = {
+                    count: failedPredictions.length,
+                    risk: getRiskLevel(maxProb),
+                    towers: failedPredictions,
+                    primaryType: getMostCommonFailureType(failedPredictions),
+                }
+            }
+
+            setPredictions(dailyPredictions)
+            setSelectedDay(dateStr) // Automatically select today
         } catch (err) {
             setError('Failed to fetch predictions')
             console.error(err)
@@ -72,6 +96,178 @@ export const ProjectDashboard = () => {
             setIsLoading(false)
         }
     }
+
+    const getRiskLevel = (
+        probability: number,
+    ): 'low' | 'medium' | 'high' | 'critical' => {
+        if (probability < 0.3) return 'low'
+        if (probability < 0.6) return 'medium'
+        if (probability < 0.8) return 'high'
+        return 'critical'
+    }
+
+    const getMostCommonFailureType = (
+        predictions: TowerPredictionResponse[],
+    ): string => {
+        const types = predictions.map((p) => p.failure_type.failure_type)
+        return (
+            types
+                .sort(
+                    (a, b) =>
+                        types.filter((v) => v === a).length -
+                        types.filter((v) => v === b).length,
+                )
+                .pop() || 'Unknown'
+        )
+    }
+
+    const getDayDetails = (date: string) => {
+        const towers = predictions[date]?.towers || []
+        return Array.isArray(towers) ? towers : [towers]
+    }
+
+    // Update calendar rendering to use new predictions format
+    const renderCalendarDay = (dayObj: { date: string; day: number }) => {
+        const prediction = predictions[dayObj.date]
+
+        return (
+            <div className="h-full flex flex-col">
+                <div className="text-right text-sm">{dayObj.day}</div>
+                {prediction && (
+                    <div className="flex-1 flex flex-col items-center justify-center mt-1">
+                        <div
+                            className={`
+                            w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold
+                            ${prediction.risk === 'low' ? 'bg-green-500' : ''}
+                            ${prediction.risk === 'medium' ? 'bg-yellow-500' : ''}
+                            ${prediction.risk === 'high' ? 'bg-orange-500' : ''}
+                            ${prediction.risk === 'critical' ? 'bg-red-500' : ''}
+                        `}
+                        >
+                            {prediction.count}
+                        </div>
+                        <div className="text-xs text-center mt-1 truncate w-full">
+                            {prediction.primaryType}
+                        </div>
+                    </div>
+                )}
+            </div>
+        )
+    }
+
+    // Update selected day details view
+    const renderDayDetails = () => {
+        if (!selectedDay) return null
+
+        const details = getDayDetails(selectedDay)
+        if (!details || details.length === 0) return null
+
+        // Ensure details is always an array
+        const detailsArray = Array.isArray(details) ? details : [details]
+
+        return (
+            <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                    <div className="flex items-center">
+                        <AlertOctagon className="text-red-500 mr-2" size={20} />
+                        <span className="font-medium">
+                            {detailsArray.length} Predicted Failures
+                        </span>
+                    </div>
+                    <RiskBadge
+                        risk={getRiskLevel(
+                            Math.max(
+                                ...detailsArray.map(
+                                    (d) => d.failure_probability,
+                                ),
+                            ),
+                        )}
+                    />
+                </div>
+
+                <div className="overflow-auto max-h-96">
+                    {detailsArray.map((prediction, index) => (
+                        <div
+                            key={index}
+                            className="bg-gray-50 p-4 rounded-lg mb-3"
+                        >
+                            <div className="flex justify-between items-start mb-2">
+                                <div className="font-medium text-lg">
+                                    Tower ID:{' '}
+                                    {prediction.tower_id || prediction.towerId}
+                                </div>
+                                <RiskIndicator
+                                    score={Math.round(
+                                        prediction.failure_probability * 100,
+                                    )}
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 text-sm mb-3">
+                                <div>
+                                    <span className="text-gray-500">
+                                        Location:
+                                    </span>{' '}
+                                    {prediction.location}
+                                </div>
+                                <div>
+                                    <span className="text-gray-500">
+                                        Failure Type:
+                                    </span>{' '}
+                                    {prediction.failure_type?.failure_type ||
+                                        prediction.failureType}
+                                </div>
+                                {prediction.predictedTime && (
+                                    <div className="flex items-center">
+                                        <AlarmClock
+                                            size={14}
+                                            className="mr-1"
+                                        />
+                                        <span className="text-gray-500 mr-1">
+                                            Predicted Time:
+                                        </span>{' '}
+                                        {prediction.predictedTime}
+                                    </div>
+                                )}
+                                {prediction.estimatedDowntime && (
+                                    <div>
+                                        <span className="text-gray-500">
+                                            Est. Downtime:
+                                        </span>{' '}
+                                        {prediction.estimatedDowntime}
+                                    </div>
+                                )}
+                                {prediction.impactedUsers && (
+                                    <div>
+                                        <span className="text-gray-500">
+                                            Impacted Users:
+                                        </span>{' '}
+                                        {prediction.impactedUsers.toLocaleString()}
+                                    </div>
+                                )}
+                                {prediction.maintenanceWindow && (
+                                    <div>
+                                        <span className="text-gray-500">
+                                            Maintenance Window:
+                                        </span>{' '}
+                                        {prediction.maintenanceWindow}
+                                    </div>
+                                )}
+                            </div>
+                            {prediction.recommendation && (
+                                <div className="bg-blue-50 p-2 rounded border-l-4 border-blue-500 text-sm">
+                                    <div className="font-medium text-blue-800 mb-1">
+                                        Recommendation
+                                    </div>
+                                    {prediction.recommendation}
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            </div>
+        )
+    }
+
     // Hardcoded prediction data
     const data = {
         predictionSummary: {
@@ -301,31 +497,16 @@ export const ProjectDashboard = () => {
     }
 
     const generateCalendarDays = () => {
-        const year = currentMonth.getFullYear()
-        const month = currentMonth.getMonth()
+        const today = new Date()
+        const dateStr = format(today, 'yyyy-MM-dd')
 
-        const daysInMonth = getDaysInMonth(year, month)
-        const firstDayOfMonth = getFirstDayOfMonth(year, month)
-
-        const days = []
-
-        // Add empty cells for days before the first day of month
-        for (let i = 0; i < firstDayOfMonth; i++) {
-            days.push({ day: null, empty: true })
-        }
-
-        // Add days of the month
-        for (let day = 1; day <= daysInMonth; day++) {
-            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-            const prediction = data.calendarPredictions[dateStr]
-            days.push({
-                day,
+        return [
+            {
+                day: today.getDate(),
                 date: dateStr,
-                prediction,
-            })
-        }
-
-        return days
+                isToday: true,
+            },
+        ]
     }
 
     const calendarDays = generateCalendarDays()
@@ -352,17 +533,12 @@ export const ProjectDashboard = () => {
         setSelectedDay(null)
     }
 
-    const handleDayClick = (day) => {
-        if (!day.prediction) return
-        setSelectedDay(day)
+    const handleDayClick = (day: { date: string; day: number }) => {
+        if (!day || !day.date) return
+        setSelectedDay(day.date)
     }
 
-    const getDayDetails = () => {
-        if (!selectedDay || !selectedDay.date) return null
-        return data.dayPredictions[selectedDay.date] || []
-    }
-
-    const selectedDayDetails = getDayDetails()
+    const selectedDayDetails = renderDayDetails()
 
     return (
         <div className="p-4 bg-gray-50 min-h-screen">
@@ -380,97 +556,22 @@ export const ProjectDashboard = () => {
                                 <h2 className="text-lg font-semibold">
                                     Failure Prediction Calendar
                                 </h2>
-                                <div className="flex items-center">
-                                    <button
-                                        onClick={goToPreviousMonth}
-                                        className="p-2 rounded-full hover:bg-gray-100"
-                                    >
-                                        <ChevronLeft size={20} />
-                                    </button>
-                                    <span className="mx-2 font-medium">
-                                        {currentMonth.toLocaleString(
-                                            'default',
-                                            { month: 'long', year: 'numeric' },
-                                        )}
-                                    </span>
-                                    <button
-                                        onClick={goToNextMonth}
-                                        className="p-2 rounded-full hover:bg-gray-100"
-                                    >
-                                        <ChevronRight size={20} />
-                                    </button>
-                                </div>
+                                <span className="font-medium">
+                                    Current Week
+                                </span>
                             </div>
 
                             {/* Calendar Grid */}
-                            <div className="grid grid-cols-7 gap-1">
-                                {/* Day labels */}
-                                {[
-                                    'Sun',
-                                    'Mon',
-                                    'Tue',
-                                    'Wed',
-                                    'Thu',
-                                    'Fri',
-                                    'Sat',
-                                ].map((day) => (
-                                    <div
-                                        key={day}
-                                        className="text-center font-medium text-gray-500 py-2"
-                                    >
-                                        {day}
-                                    </div>
-                                ))}
-
-                                {/* Calendar days */}
-                                {calendarDays.map((dayObj, index) => (
-                                    <div
-                                        key={index}
-                                        className={`
-                      aspect-square border rounded-md p-1 
-                      ${dayObj.empty ? 'bg-gray-50' : 'hover:bg-gray-50 cursor-pointer'}
-                      ${selectedDay && selectedDay.date === dayObj.date ? 'ring-2 ring-blue-500' : ''}
-                    `}
-                                        onClick={() =>
-                                            !dayObj.empty &&
-                                            handleDayClick(dayObj)
-                                        }
-                                    >
-                                        {!dayObj.empty && (
-                                            <div className="h-full flex flex-col">
-                                                <div className="text-right text-sm">
-                                                    {dayObj.day}
-                                                </div>
-                                                {dayObj.prediction && (
-                                                    <div className="flex-1 flex flex-col items-center justify-center mt-1">
-                                                        <div
-                                                            className={`
-                              w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold
-                              ${dayObj.prediction.risk === 'low' ? 'bg-green-500' : ''}
-                              ${dayObj.prediction.risk === 'medium' ? 'bg-yellow-500' : ''}
-                              ${dayObj.prediction.risk === 'high' ? 'bg-orange-500' : ''}
-                              ${dayObj.prediction.risk === 'critical' ? 'bg-red-500' : ''}
-                            `}
-                                                        >
-                                                            {
-                                                                dayObj
-                                                                    .prediction
-                                                                    .count
-                                                            }
-                                                        </div>
-                                                        <div className="text-xs text-center mt-1 truncate w-full">
-                                                            {
-                                                                dayObj.prediction.primaryType.split(
-                                                                    ' ',
-                                                                )[0]
-                                                            }
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                ))}
+                            <div className="grid grid-cols-1 gap-1">
+                                {/* Single day */}
+                                <div
+                                    className="aspect-square border rounded-md p-1 ring-2 ring-blue-500 hover:bg-gray-50 cursor-pointer"
+                                    onClick={() =>
+                                        handleDayClick(calendarDays[0])
+                                    }
+                                >
+                                    {renderCalendarDay(calendarDays[0])}
+                                </div>
                             </div>
 
                             {/* Legend */}
@@ -498,7 +599,7 @@ export const ProjectDashboard = () => {
                         <div className=" p-4 rounded-lg shadow flex-1">
                             <h2 className="text-lg font-semibold mb-4">
                                 {selectedDay
-                                    ? `Predicted Failures - ${new Date(selectedDay.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`
+                                    ? `Predicted Failures - ${new Date(selectedDay).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`
                                     : 'Select a day with predicted failures'}
                             </h2>
 
@@ -521,45 +622,72 @@ export const ProjectDashboard = () => {
                                                 size={20}
                                             />
                                             <span className="font-medium">
-                                                {selectedDay.prediction.count}{' '}
+                                                {Array.isArray(
+                                                    selectedDayDetails,
+                                                )
+                                                    ? selectedDayDetails.length
+                                                    : 1}{' '}
                                                 Predicted Failures
                                             </span>
                                         </div>
                                         <RiskBadge
-                                            risk={selectedDay.prediction.risk}
+                                            risk={getRiskLevel(
+                                                Math.max(
+                                                    ...(Array.isArray(
+                                                        selectedDayDetails,
+                                                    )
+                                                        ? selectedDayDetails.map(
+                                                              (d) =>
+                                                                  d.failure_probability,
+                                                          )
+                                                        : [
+                                                              selectedDayDetails.failure_probability,
+                                                          ]),
+                                                ),
+                                            )}
                                         />
                                     </div>
 
                                     <div className="overflow-auto max-h-96">
-                                        {selectedDayDetails.map(
-                                            (detail, index) => (
-                                                <div
-                                                    key={index}
-                                                    className="bg-gray-50 p-4 rounded-lg mb-3"
-                                                >
-                                                    <div className="flex justify-between items-start mb-2">
-                                                        <div className="font-medium text-lg">
-                                                            {detail.towerId}
-                                                        </div>
-                                                        <RiskIndicator
-                                                            score={
-                                                                detail.riskScore
-                                                            }
-                                                        />
+                                        {(Array.isArray(selectedDayDetails)
+                                            ? selectedDayDetails
+                                            : [selectedDayDetails]
+                                        ).map((detail, index) => (
+                                            <div
+                                                key={index}
+                                                className="bg-gray-50 p-4 rounded-lg mb-3"
+                                            >
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <div className="font-medium text-lg">
+                                                        {detail.tower_id ||
+                                                            detail.towerId}
                                                     </div>
-                                                    <div className="grid grid-cols-2 gap-2 text-sm mb-3">
-                                                        <div>
-                                                            <span className="text-gray-500">
-                                                                Location:
-                                                            </span>{' '}
-                                                            {detail.location}
-                                                        </div>
-                                                        <div>
-                                                            <span className="text-gray-500">
-                                                                Failure Type:
-                                                            </span>{' '}
-                                                            {detail.failureType}
-                                                        </div>
+                                                    <RiskIndicator
+                                                        score={
+                                                            Math.round(
+                                                                detail.failure_probability *
+                                                                    100,
+                                                            ) ||
+                                                            detail.riskScore
+                                                        }
+                                                    />
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-2 text-sm mb-3">
+                                                    <div>
+                                                        <span className="text-gray-500">
+                                                            Location:
+                                                        </span>{' '}
+                                                        {detail.location}
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-gray-500">
+                                                            Failure Type:
+                                                        </span>{' '}
+                                                        {detail.failure_type
+                                                            ?.failure_type ||
+                                                            detail.failureType}
+                                                    </div>
+                                                    {detail.predictedTime && (
                                                         <div className="flex items-center">
                                                             <AlarmClock
                                                                 size={14}
@@ -572,6 +700,8 @@ export const ProjectDashboard = () => {
                                                                 detail.predictedTime
                                                             }
                                                         </div>
+                                                    )}
+                                                    {detail.estimatedDowntime && (
                                                         <div>
                                                             <span className="text-gray-500">
                                                                 Est. Downtime:
@@ -580,12 +710,16 @@ export const ProjectDashboard = () => {
                                                                 detail.estimatedDowntime
                                                             }
                                                         </div>
+                                                    )}
+                                                    {detail.impactedUsers && (
                                                         <div>
                                                             <span className="text-gray-500">
                                                                 Impacted Users:
                                                             </span>{' '}
                                                             {detail.impactedUsers.toLocaleString()}
                                                         </div>
+                                                    )}
+                                                    {detail.maintenanceWindow && (
                                                         <div>
                                                             <span className="text-gray-500">
                                                                 Maintenance
@@ -595,16 +729,18 @@ export const ProjectDashboard = () => {
                                                                 detail.maintenanceWindow
                                                             }
                                                         </div>
-                                                    </div>
+                                                    )}
+                                                </div>
+                                                {detail.recommendation && (
                                                     <div className="bg-blue-50 p-2 rounded border-l-4 border-blue-500 text-sm">
                                                         <div className="font-medium text-blue-800 mb-1">
                                                             Recommendation
                                                         </div>
                                                         {detail.recommendation}
                                                     </div>
-                                                </div>
-                                            ),
-                                        )}
+                                                )}
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
                             )}
