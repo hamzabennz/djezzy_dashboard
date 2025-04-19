@@ -22,6 +22,7 @@ const dashboardsRoute: Routes = [
             pageContainerType: 'contained',
         },
     },
+    /*
     {
         key: 'dashboard.marketing',
         path: `${DASHBOARDS_PREFIX_PATH}/marketing`,
@@ -41,7 +42,7 @@ const dashboardsRoute: Routes = [
             pageBackgroundType: 'plain',
         },
     },
-
+    */
     {
         key: 'netmon',
         path: `${DASHBOARDS_PREFIX_PATH}/network-monitor`,

@@ -42,6 +42,7 @@ const dashboardsNavigationConfig: NavigationTree[] = [
                 authority: [ADMIN, USER],
                 subMenu: [],
             },
+            /*
             {
                 key: 'dashboard.marketing',
                 path: `${DASHBOARDS_PREFIX_PATH}/marketing`,
@@ -52,6 +53,7 @@ const dashboardsNavigationConfig: NavigationTree[] = [
                 authority: [ADMIN, USER],
                 subMenu: [],
             },
+
             {
                 key: 'dashboard.analytic',
                 path: `${DASHBOARDS_PREFIX_PATH}/analytic`,
@@ -62,6 +64,7 @@ const dashboardsNavigationConfig: NavigationTree[] = [
                 authority: [ADMIN, USER],
                 subMenu: [],
             },
+            */
 
             {
                 key: 'netmon',
