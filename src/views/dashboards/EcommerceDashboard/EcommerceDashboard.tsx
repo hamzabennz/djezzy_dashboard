@@ -29,19 +29,19 @@ const SalesDashboard = () => {
                             <div className="flex flex-col gap-4 flex-1 xl:col-span-3">
                                 <Overview data={data.statisticData} />
                                 <CustomerDemographic
-                                    data={data.customerDemographic}
+                                   
                                 />
                             </div>
                             <div className="flex flex-col gap-4 2xl:min-w-[360px]">
-                                <SalesTarget data={data.salesTarget} />
-                                <TopProduct data={data.topProduct} />
+                                <SalesTarget  />
+                                <TopProduct  />
                                 <RevenueByChannel
                                     data={data.revenueByChannel}
                                 />
                             </div>
                         </div>
 
-                        <RecentOrder data={data.recentOrders} />
+                        <RecentOrder  />
                     </div>
                 </div>
             )}

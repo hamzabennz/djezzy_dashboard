@@ -1,172 +1,66 @@
-import { useCallback } from 'react'
-import Badge from '@/components/ui/Badge'
-import Button from '@/components/ui/Button'
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import Card from '@/components/ui/Card'
-import Table from '@/components/ui/Table'
-import {
-    useReactTable,
-    getCoreRowModel,
-    flexRender,
-    createColumnHelper,
-} from '@tanstack/react-table'
+import Button from '@/components/ui/Button'
 import { useNavigate } from 'react-router-dom'
-import { NumericFormat } from 'react-number-format'
-import dayjs from 'dayjs'
 
-import type { Order } from '../types'
-
-type RecentOrderProps = {
-    data: Order[]
-}
-const { Tr, Td, TBody, THead, Th } = Table
-
-const orderStatusColor: Record<
-    number,
-    {
-        label: string
-        dotClass: string
-        textClass: string
-    }
-> = {
-    0: {
-        label: 'Paid',
-        dotClass: 'bg-emerald-500',
-        textClass: 'text-emerald-500',
-    },
-    1: {
-        label: 'Pending',
-        dotClass: 'bg-amber-500',
-        textClass: 'text-amber-500',
-    },
-    2: { label: 'Failed', dotClass: 'bg-red-500', textClass: 'text-red-500' },
-}
-
-const OrderColumn = ({ row }: { row: Order }) => {
-    const navigate = useNavigate()
-
-    const handleView = useCallback(() => {
-        navigate(`/concepts/orders/order-details/${row.id}`)
-    }, [navigate, row])
-
-    return (
-        <span
-            className={`cursor-pointer select-none font-semibold hover:text-primary`}
-            onClick={handleView}
-        >
-            #{row.id}
-        </span>
-    )
-}
-
-const columnHelper = createColumnHelper<Order>()
-
-const columns = [
-    columnHelper.accessor('id', {
-        header: 'Order',
-        cell: (props) => <OrderColumn row={props.row.original} />,
-    }),
-    columnHelper.accessor('status', {
-        header: 'Status',
-        cell: (props) => {
-            const { status } = props.row.original
-            return (
-                <div className="flex items-center">
-                    <Badge className={orderStatusColor[status].dotClass} />
-                    <span
-                        className={`ml-2 rtl:mr-2 capitalize font-semibold ${orderStatusColor[status].textClass}`}
-                    >
-                        {orderStatusColor[status].label}
-                    </span>
-                </div>
-            )
-        },
-    }),
-    columnHelper.accessor('date', {
-        header: 'Date',
-        cell: (props) => {
-            const row = props.row.original
-            return <span>{dayjs.unix(row.date).format('DD/MM/YYYY')}</span>
-        },
-    }),
-    columnHelper.accessor('customer', {
-        header: 'Customer',
-    }),
-    columnHelper.accessor('totalAmount', {
-        header: 'Amount spent',
-        cell: (props) => {
-            const { totalAmount } = props.row.original
-            return (
-                <NumericFormat
-                    className="heading-text font-bold"
-                    displayType="text"
-                    value={(Math.round(totalAmount * 100) / 100).toFixed(2)}
-                    prefix={'$'}
-                    thousandSeparator={true}
-                />
-            )
-        },
-    }),
+const failureData = [
+    { name: 'HARDWARE PROBLEM', value: 24.2 },
+    { name: '2G cell down', value: 16.3 },
+    { name: 'Power problem', value: 15.65 },
+    { name: 'LOSS-OF-ALL CHANNEL', value: 15.5 },
+    { name: '4G cell down', value: 14.0 },
+    { name: '3G cell down', value: 7.35 },
+    { name: 'Temperature_alarm', value: 7.0 },
 ]
 
-const RecentOrder = ({ data = [] }: RecentOrderProps) => {
-    const navigate = useNavigate()
+const COLORS = [
+    '#8884d8',
+    '#82ca9d',
+    '#ffc658',
+    '#ff8042',
+    '#00C49F',
+    '#FFBB28',
+    '#FF6666',
+]
 
-    const table = useReactTable({
-        data,
-        columns,
-        getCoreRowModel: getCoreRowModel(),
-    })
+const RecentOrder = () => {
+    const navigate = useNavigate()
 
     return (
         <Card>
             <div className="flex items-center justify-between mb-6">
-                <h4>Recent Orders</h4>
+                <h4>Failure Type Distribution</h4>
                 <Button
                     size="sm"
                     onClick={() => navigate('/concepts/orders/order-list')}
                 >
-                    View Orders
+                    View Details
                 </Button>
             </div>
-            <Table>
-                <THead>
-                    {table.getHeaderGroups().map((headerGroup) => (
-                        <Tr key={headerGroup.id}>
-                            {headerGroup.headers.map((header) => {
-                                return (
-                                    <Th
-                                        key={header.id}
-                                        colSpan={header.colSpan}
-                                    >
-                                        {flexRender(
-                                            header.column.columnDef.header,
-                                            header.getContext(),
-                                        )}
-                                    </Th>
-                                )
-                            })}
-                        </Tr>
-                    ))}
-                </THead>
-                <TBody>
-                    {table.getRowModel().rows.map((row) => {
-                        return (
-                            <Tr key={row.id}>
-                                {row.getVisibleCells().map((cell) => {
-                                    return (
-                                        <Td key={cell.id}>
-                                            {flexRender(
-                                                cell.column.columnDef.cell,
-                                                cell.getContext(),
-                                            )}
-                                        </Td>
-                                    )
-                                })}
-                            </Tr>
-                        )
-                    })}
-                </TBody>
-            </Table>
+            <div className="h-96">
+                <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                        <Pie
+                            data={failureData}
+                            dataKey="value"
+                            nameKey="name"
+                            cx="50%"
+                            cy="50%"
+                            outerRadius={120}
+                            label
+                        >
+                            {failureData.map((entry, index) => (
+                                <Cell
+                                    key={`cell-${index}`}
+                                    fill={COLORS[index % COLORS.length]}
+                                />
+                            ))}
+                        </Pie>
+                        <Tooltip />
+                        <Legend />
+                    </PieChart>
+                </ResponsiveContainer>
+            </div>
         </Card>
     )
 }
