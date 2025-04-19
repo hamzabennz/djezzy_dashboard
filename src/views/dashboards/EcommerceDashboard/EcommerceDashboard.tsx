@@ -41,7 +41,7 @@ const SalesDashboard = () => {
                             </div>
                         </div>
 
-                        <RecentOrder  />
+                       
                     </div>
                 </div>
             )}
