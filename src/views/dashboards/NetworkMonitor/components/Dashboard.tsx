@@ -14,7 +14,7 @@ const Dashboard: React.FC = () => {
     const { isMobile } = useUI()
 
     return (
-        <div className="flex flex-col h-screen bg-navy-950">
+        <div className="flex flex-col h-full bg-navy-950">
             <Header />
 
             <div className="flex-1 flex overflow-hidden p-4 gap-4">
