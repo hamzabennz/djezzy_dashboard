@@ -53,20 +53,6 @@ module.exports = {
         },
         extend: {
             colors: {
-                colors: {
-                    navy: {
-                        950: '#0A1022',
-                        900: '#0F172A',
-                        800: '#1E293B',
-                        700: '#334155',
-                        400: '#94A3B8',
-                        300: '#CBD5E1',
-                    },
-                    teal: {
-                        600: '#0D9488',
-                        500: '#14B8A6',
-                    },
-                },
                 primary: 'var(--primary)',
                 'primary-deep': 'var(--primary-deep)',
                 'primary-mild': 'var(--primary-mild)',
@@ -92,32 +78,6 @@ module.exports = {
                 'gray-900': 'var(--gray-900)',
                 'gray-950': 'var(--gray-950)',
                 // NetworkMonitor custom colors
-                navy: {
-                    50: '#f5f7fa',
-                    100: '#eaeef4',
-                    200: '#d0dbe8',
-                    300: '#a6bcd5',
-                    400: '#759abe',
-                    500: '#5380a7',
-                    600: '#3e648a',
-                    700: '#325171',
-                    800: '#24395a',
-                    900: '#1e304b',
-                    950: '#0F172A',
-                },
-                teal: {
-                    50: '#effef7',
-                    100: '#d7faed',
-                    200: '#b2f2dd',
-                    300: '#7ee5c7',
-                    400: '#46d0ac',
-                    500: '#2cb894',
-                    600: '#0D9488',
-                    700: '#157261',
-                    800: '#155a4f',
-                    900: '#144a42',
-                    950: '#0a2a27',
-                },
             },
             typography: (theme) => ({
                 DEFAULT: {

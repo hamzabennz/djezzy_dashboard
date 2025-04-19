@@ -190,6 +190,7 @@ const navigationIcon: NavigationIcons = {
     sharedComponentDoc: <PiShareNetworkDuotone />,
     utilsDoc: <PiToolboxDuotone />,
     changeLog: <PiCodeDuotone />,
+    dashboardNetworkMonitor: <PiSpeedometerDuotone />,
 }
 
 export default navigationIcon

@@ -5,7 +5,6 @@ import TowerStatisticsPanel from './TowerStatisticsPanel'
 import MonitoringSection from './MonitoringSection'
 import Chatbot from './Chatbot'
 import Terminal from './Terminal'
-import ControlPanel from './ControlPanel'
 import { useTower } from '../context/TowerContext'
 import { useUI } from '../context/UIContext'
 
@@ -14,29 +13,27 @@ const Dashboard: React.FC = () => {
     const { isMobile } = useUI()
 
     return (
-        <div className="flex flex-col h-full bg-navy-950">
-            <Header />
+        <div>
+            <div className="flex flex-col gap-4 max-w-full overflow-x-hidden">
+                <Header />
 
-            <div className="flex-1 flex overflow-hidden p-4 gap-4">
-                {/* Main content area */}
-                <div className="flex-1 flex flex-col gap-4">
-                    <MapView />
-                    {isMobile && selectedTower && <TowerStatisticsPanel />}
-                    {isMobile && <MonitoringSection />}
+                <div className="flex flex-col xl:flex-row gap-4">
+                    <div className="flex flex-col gap-4 flex-1">
+                        <MapView />
+                        {isMobile && selectedTower && <TowerStatisticsPanel />}
+                    </div>
+
+                    {!isMobile && (
+                        <div className="flex flex-col gap-4 2xl:min-w-[360px]">
+                            <TowerStatisticsPanel />
+                            <MonitoringSection />
+                        </div>
+                    )}
                 </div>
 
-                {/* Side panel */}
-                {!isMobile && (
-                    <div className="w-96 flex flex-col gap-4">
-                        {selectedTower && <TowerStatisticsPanel />}
-                        <MonitoringSection />
-                        <ControlPanel />
-                    </div>
-                )}
+                <Chatbot />
+                <Terminal />
             </div>
-
-            <Terminal />
-            <Chatbot />
         </div>
     )
 }

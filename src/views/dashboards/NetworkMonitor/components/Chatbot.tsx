@@ -55,7 +55,7 @@ const Chatbot: React.FC = () => {
             {/* Chatbot toggle button */}
             {!isOpen && (
                 <button
-                    className="fixed bottom-6 right-6 bg-teal-600 hover:bg-teal-700 text-white rounded-full p-3 shadow-lg transition-all duration-200 flex items-center"
+                    className="fixed bottom-6 right-6 bg-primary hover:bg-primary-deep text-white rounded-full p-3 shadow-lg transition-all duration-200 flex items-center"
                     onClick={() => setIsOpen(true)}
                 >
                     <MessageSquare className="h-6 w-6" />
@@ -64,17 +64,14 @@ const Chatbot: React.FC = () => {
 
             {/* Chatbot interface */}
             {isOpen && (
-                <div className="fixed bottom-6 right-6 bg-navy-900 border border-navy-800 rounded-lg shadow-xl w-80 sm:w-96 flex flex-col transition-all duration-200 animate-slideUp z-50">
+                <div className="fixed bottom-6 right-6 bg-white border border-gray-200 rounded-lg shadow-xl w-80 sm:w-96 flex flex-col transition-transform duration-300 ease-in-out">
                     {/* Header */}
-                    <div className="bg-navy-800 p-3 rounded-t-lg flex items-center justify-between">
-                        <div className="flex items-center">
-                            <MessageSquare className="h-5 w-5 text-teal-500 mr-2" />
-                            <h3 className="font-medium">
-                                Network AI Assistant
-                            </h3>
-                        </div>
+                    <div className="bg-primary p-3 rounded-t-lg flex items-center justify-between">
+                        <h3 className="font-medium text-white">
+                            Network AI Assistant
+                        </h3>
                         <button
-                            className="text-gray-400 hover:text-white"
+                            className="text-white/80 hover:text-white"
                             onClick={() => setIsOpen(false)}
                         >
                             <X className="h-5 w-5" />
@@ -86,39 +83,38 @@ const Chatbot: React.FC = () => {
                         {messages.map((message, i) => (
                             <div
                                 key={i}
-                                className={`p-2 rounded-lg text-sm ${
-                                    message.type === 'user'
-                                        ? 'bg-navy-800 ml-auto'
-                                        : 'bg-teal-900/30 mr-auto'
-                                } max-w-[80%]`}
+                                className={`p-2 rounded-lg text-sm ${message.type === 'user'
+                                    ? 'bg-primary text-white ml-auto'
+                                    : 'bg-gray-100 text-gray-800 mr-auto'
+                                    } max-w-[80%]`}
                             >
                                 {message.content}
                             </div>
                         ))}
 
                         {isLoading && (
-                            <div className="bg-teal-900/30 p-2 rounded-lg flex items-center gap-2 text-sm mr-auto">
-                                <Loader className="h-4 w-4 animate-spin text-teal-500" />
-                                Processing your request...
+                            <div className="bg-gray-100 p-2 rounded-lg flex items-center gap-2 text-sm mr-auto">
+                                <Loader className="h-4 w-4 animate-spin text-primary" />
+                                <span className="text-gray-800">Processing your request...</span>
                             </div>
                         )}
                     </div>
 
                     {/* Input */}
                     <form
-                        className="p-3 border-t border-navy-800 flex gap-2"
+                        className="p-3 border-t border-gray-200 flex gap-2"
                         onSubmit={handleSubmit}
                     >
                         <input
                             type="text"
                             placeholder="Report an issue or ask for help..."
-                            className="flex-1 bg-navy-800 border border-navy-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
+                            className="flex-1 bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
                             value={inputValue}
                             onChange={(e) => setInputValue(e.target.value)}
                         />
                         <button
                             type="submit"
-                            className="bg-teal-600 hover:bg-teal-700 rounded-lg p-2 text-white disabled:opacity-50"
+                            className="bg-primary hover:bg-primary-deep rounded-lg p-2 text-white disabled:opacity-50"
                             disabled={!inputValue.trim() || isLoading}
                         >
                             <CornerDownLeft className="h-5 w-5" />
