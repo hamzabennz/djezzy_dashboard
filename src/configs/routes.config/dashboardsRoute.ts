@@ -41,6 +41,17 @@ const dashboardsRoute: Routes = [
             pageBackgroundType: 'plain',
         },
     },
+
+    {
+        key: 'netmon',
+        path: `${DASHBOARDS_PREFIX_PATH}/network-monitor`,
+        component: lazy(() => import('@/views/dashboards/NetworkMonitor')),
+        authority: [ADMIN, USER],
+        meta: {
+            pageContainerType: 'contained',
+            pageBackgroundType: 'plain',
+        },
+    },
 ]
 
 export default dashboardsRoute

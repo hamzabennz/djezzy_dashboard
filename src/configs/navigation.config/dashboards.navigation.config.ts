@@ -5,6 +5,7 @@ import {
 } from '@/constants/navigation.constant'
 import { ADMIN, USER } from '@/constants/roles.constant'
 import type { NavigationTree } from '@/@types/navigation'
+import path from 'path'
 
 const dashboardsNavigationConfig: NavigationTree[] = [
     {
@@ -57,6 +58,17 @@ const dashboardsNavigationConfig: NavigationTree[] = [
                 title: 'Analytic',
                 translateKey: 'nav.dashboard.analytic',
                 icon: 'dashboardAnalytic',
+                type: NAV_ITEM_TYPE_ITEM,
+                authority: [ADMIN, USER],
+                subMenu: [],
+            },
+
+            {
+                key: 'netmon',
+                path: `${DASHBOARDS_PREFIX_PATH}/network-monitor`,
+                title: 'Network Monitor',
+                translateKey: 'nav.dashboard.network-monitor',
+                icon: 'dashboardNetworkMonitor',
                 type: NAV_ITEM_TYPE_ITEM,
                 authority: [ADMIN, USER],
                 subMenu: [],
