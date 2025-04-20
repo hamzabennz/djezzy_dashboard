@@ -2,7 +2,7 @@ import axios from 'axios'
 import { TowerPredictionResponse } from '../types/prediction'
 
 export class TowerPredictionService {
-    private readonly baseUrl = 'http://192.168.0.106:8000'
+    private readonly baseUrl = 'http://172.20.10.8:8000'
 
     async getPrediction(
         towerId: string,
@@ -10,11 +10,6 @@ export class TowerPredictionService {
         date: string,
     ): Promise<TowerPredictionResponse> {
         try {
-            console.log('RESYESSS ', {
-                tower_id: towerId,
-                location: location,
-                date: date,
-            })
             const response = await axios.post(
                 `${this.baseUrl}/predict/tower`,
                 {
@@ -36,19 +31,21 @@ export class TowerPredictionService {
     }
 
     async getBatchPredictions(
-        towers: { towerId: string; location: string }[],
-        date: string,
+        towers: { tower_id: string; location: string; date: string }[],
     ): Promise<TowerPredictionResponse[]> {
         try {
-            const predictions = await Promise.all(
-                towers.map((tower) =>
-                    this.getPrediction(tower.towerId, tower.location, date),
-                ),
+            const response = await axios.post(
+                `${this.baseUrl}/predict/batch`,
+                { towers },
+                {
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                },
             )
-            console.log('Batch predictions response:', predictions)
-            return predictions
+            console.log('Batch prediction response:', response.data)
+            return response.data
         } catch (error) {
-            console.error('Batch predictions error:', error)
             throw new Error(`Failed to fetch batch predictions: ${error}`)
         }
     }

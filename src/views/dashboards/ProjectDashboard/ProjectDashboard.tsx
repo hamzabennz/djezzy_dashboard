@@ -42,10 +42,12 @@ export const ProjectDashboard = () => {
     const [error, setError] = useState<string | null>(null)
     const [currentMonth, setCurrentMonth] = useState<Date>(new Date())
     const [selectedDay, setSelectedDay] = useState<string | null>(null)
+    const [currentTower, setCurrentTower] = useState<string | null>(null)
+    const [currentDay, setCurrentDay] = useState<string | null>(null)
 
     useEffect(() => {
-        fetchMonthPredictions()
-    }, [currentMonth])
+        fetchNextThreeDaysPredictions()
+    }, [])
 
     const fetchMonthPredictions = async () => {
         setIsLoading(true)
@@ -93,6 +95,84 @@ export const ProjectDashboard = () => {
             setError('Failed to fetch predictions')
             console.error(err)
         } finally {
+            setIsLoading(false)
+        }
+    }
+
+    const fetchNextThreeDaysPredictions = async () => {
+        setIsLoading(true)
+        setError(null)
+
+        const service = new TowerPredictionService()
+        const today = new Date()
+        const nextThreeDays = Array.from({ length: 3 }, (_, i) => {
+            const date = new Date(today)
+            date.setDate(today.getDate() + i)
+            return format(date, 'yyyy-MM-dd')
+        })
+
+        const dailyPredictions: DailyPredictions = {}
+
+        try {
+            // Create a batch of requests for all towers across all 3 days
+            const batchRequests = nextThreeDays.flatMap((dateStr) =>
+                towersData.map((towerId) => ({
+                    towerId,
+                    location: `Location_${towerId.slice(3)}`,
+                    date: dateStr,
+                })),
+            )
+
+            // Fetch all predictions in parallel
+            for (const { towerId, location, date } of batchRequests) {
+                try {
+                    setCurrentTower(towerId) // Update current tower
+                    setCurrentDay(date) // Update current day
+                    const prediction = await service.getPrediction(
+                        towerId,
+                        location,
+                        date,
+                    )
+                    if (prediction.predicted_failure) {
+                        if (!dailyPredictions[date]) {
+                            dailyPredictions[date] = {
+                                count: 0,
+                                risk: 'low',
+                                towers: [],
+                                primaryType: '',
+                            }
+                        }
+
+                        const dayData = dailyPredictions[date]
+                        dayData.count += 1
+                        dayData.towers.push(prediction)
+                        dayData.risk = getRiskLevel(
+                            Math.max(
+                                ...dayData.towers.map(
+                                    (p) => p.failure_probability,
+                                ),
+                            ),
+                        )
+                        dayData.primaryType = getMostCommonFailureType(
+                            dayData.towers,
+                        )
+                    }
+                } catch (err) {
+                    console.error(
+                        `Failed to fetch prediction for tower ${towerId} on ${date}:`,
+                        err,
+                    )
+                }
+            }
+
+            setPredictions(dailyPredictions)
+            setSelectedDay(nextThreeDays[0]) // Automatically select the first day
+        } catch (err) {
+            setError('Failed to fetch predictions')
+            console.error(err)
+        } finally {
+            setCurrentTower(null) // Clear current tower after loading
+            setCurrentDay(null) // Clear current day after loading
             setIsLoading(false)
         }
     }
@@ -498,15 +578,15 @@ export const ProjectDashboard = () => {
 
     const generateCalendarDays = () => {
         const today = new Date()
-        const dateStr = format(today, 'yyyy-MM-dd')
-
-        return [
-            {
-                day: today.getDate(),
-                date: dateStr,
-                isToday: true,
-            },
-        ]
+        return Array.from({ length: 3 }, (_, i) => {
+            const date = new Date(today)
+            date.setDate(today.getDate() + i)
+            return {
+                day: date.getDate(),
+                date: format(date, 'yyyy-MM-dd'),
+                isToday: i === 0,
+            }
+        })
     }
 
     const calendarDays = generateCalendarDays()
@@ -551,52 +631,112 @@ export const ProjectDashboard = () => {
                     {/* Calendar and Day Details */}
                     <div className="flex flex-col xl:flex-row gap-4">
                         {/* Calendar */}
-                        <div className=" p-4 rounded-lg shadow flex-1">
+                        <div className="bg-white p-4 rounded-lg shadow flex-1">
                             <div className="flex justify-between items-center mb-4">
                                 <h2 className="text-lg font-semibold">
-                                    Failure Prediction Calendar
+                                    Next 3 Days Predictions
                                 </h2>
                                 <span className="font-medium">
-                                    Current Week
+                                    {format(new Date(), 'MMMM yyyy')}
                                 </span>
                             </div>
 
-                            {/* Calendar Grid */}
-                            <div className="grid grid-cols-1 gap-1">
-                                {/* Single day */}
-                                <div
-                                    className="aspect-square border rounded-md p-1 ring-2 ring-blue-500 hover:bg-gray-50 cursor-pointer"
-                                    onClick={() =>
-                                        handleDayClick(calendarDays[0])
-                                    }
-                                >
-                                    {renderCalendarDay(calendarDays[0])}
-                                </div>
-                            </div>
-
-                            {/* Legend */}
-                            <div className="mt-4 flex justify-center gap-4 text-sm">
-                                <div className="flex items-center">
-                                    <div className="w-3 h-3 rounded-full bg-green-500 mr-1"></div>
-                                    <span>Low Risk</span>
-                                </div>
-                                <div className="flex items-center">
-                                    <div className="w-3 h-3 rounded-full bg-yellow-500 mr-1"></div>
-                                    <span>Medium Risk</span>
-                                </div>
-                                <div className="flex items-center">
-                                    <div className="w-3 h-3 rounded-full bg-orange-500 mr-1"></div>
-                                    <span>High Risk</span>
-                                </div>
-                                <div className="flex items-center">
-                                    <div className="w-3 h-3 rounded-full bg-red-500 mr-1"></div>
-                                    <span>Critical Risk</span>
-                                </div>
+                            {/* 3-Day Grid */}
+                            <div className="grid grid-cols-3 gap-4">
+                                {isLoading ? (
+                                    // Loading skeleton for 3 days
+                                    <>
+                                        {[1, 2, 3].map((i) => (
+                                            <div
+                                                key={i}
+                                                className="aspect-square border rounded-md p-3 animate-pulse"
+                                            >
+                                                <div className="h-full flex flex-col">
+                                                    <div className="flex justify-between items-center mb-2">
+                                                        <div className="h-4 w-8 bg-gray-200 rounded"></div>
+                                                        <div className="h-4 w-6 bg-gray-200 rounded"></div>
+                                                    </div>
+                                                    <div className="flex-1 flex flex-col items-center justify-center">
+                                                        <div className="w-10 h-10 bg-gray-200 rounded-full mb-2"></div>
+                                                        <div className="h-3 w-20 bg-gray-200 rounded"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </>
+                                ) : (
+                                    // Actual content
+                                    calendarDays.map((dayObj) => (
+                                        <div
+                                            key={dayObj.date}
+                                            className={`
+                    aspect-square border rounded-md p-3 cursor-pointer
+                    ${selectedDay === dayObj.date ? 'ring-2 ring-blue-500' : ''}
+                    ${dayObj.isToday ? 'bg-blue-50' : 'hover:bg-gray-50'}
+                `}
+                                            onClick={() =>
+                                                handleDayClick(dayObj)
+                                            }
+                                        >
+                                            <div className="h-full flex flex-col">
+                                                <div className="flex justify-between items-center mb-2">
+                                                    <span
+                                                        className={`text-sm ${dayObj.isToday ? 'font-bold' : ''}`}
+                                                    >
+                                                        {format(
+                                                            new Date(
+                                                                dayObj.date,
+                                                            ),
+                                                            'EEE',
+                                                        )}
+                                                    </span>
+                                                    <span
+                                                        className={`text-sm ${dayObj.isToday ? 'font-bold' : ''}`}
+                                                    >
+                                                        {dayObj.day}
+                                                    </span>
+                                                </div>
+                                                {predictions[dayObj.date] && (
+                                                    <div className="flex-1 flex flex-col items-center justify-center">
+                                                        <div
+                                                            className={`
+                                w-10 h-10 rounded-full flex items-center justify-center 
+                                text-white text-sm font-bold mb-2
+                                ${predictions[dayObj.date].risk === 'low' ? 'bg-green-500' : ''}
+                                ${predictions[dayObj.date].risk === 'medium' ? 'bg-yellow-500' : ''}
+                                ${predictions[dayObj.date].risk === 'high' ? 'bg-orange-500' : ''}
+                                ${predictions[dayObj.date].risk === 'critical' ? 'bg-red-500' : ''}
+                            `}
+                                                        >
+                                                            {
+                                                                predictions[
+                                                                    dayObj.date
+                                                                ].count
+                                                            }
+                                                        </div>
+                                                        <div className="text-xs text-center truncate w-full">
+                                                            {
+                                                                predictions[
+                                                                    dayObj.date
+                                                                ].primaryType
+                                                            }
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                {!predictions[dayObj.date] && (
+                                                    <div className="flex-1 flex items-center justify-center text-gray-400">
+                                                        <Check size={24} />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
                             </div>
                         </div>
 
                         {/* Selected Day Details */}
-                        <div className=" p-4 rounded-lg shadow flex-1">
+                        <div className="p-4 rounded-lg shadow flex-1">
                             <h2 className="text-lg font-semibold mb-4">
                                 {selectedDay
                                     ? `Predicted Failures - ${new Date(selectedDay).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`
@@ -613,7 +753,7 @@ export const ProjectDashboard = () => {
                                 </div>
                             )}
 
-                            {selectedDay && selectedDayDetails && (
+                            {selectedDay && predictions[selectedDay] && (
                                 <div className="space-y-4">
                                     <div className="flex justify-between items-center">
                                         <div className="flex items-center">
@@ -622,125 +762,112 @@ export const ProjectDashboard = () => {
                                                 size={20}
                                             />
                                             <span className="font-medium">
-                                                {Array.isArray(
-                                                    selectedDayDetails,
-                                                )
-                                                    ? selectedDayDetails.length
-                                                    : 1}{' '}
+                                                {
+                                                    predictions[selectedDay]
+                                                        .towers.length
+                                                }{' '}
                                                 Predicted Failures
                                             </span>
                                         </div>
                                         <RiskBadge
-                                            risk={getRiskLevel(
-                                                Math.max(
-                                                    ...(Array.isArray(
-                                                        selectedDayDetails,
-                                                    )
-                                                        ? selectedDayDetails.map(
-                                                              (d) =>
-                                                                  d.failure_probability,
-                                                          )
-                                                        : [
-                                                              selectedDayDetails.failure_probability,
-                                                          ]),
-                                                ),
-                                            )}
+                                            risk={predictions[selectedDay].risk}
                                         />
                                     </div>
 
                                     <div className="overflow-auto max-h-96">
-                                        {(Array.isArray(selectedDayDetails)
-                                            ? selectedDayDetails
-                                            : [selectedDayDetails]
-                                        ).map((detail, index) => (
-                                            <div
-                                                key={index}
-                                                className="bg-gray-50 p-4 rounded-lg mb-3"
-                                            >
-                                                <div className="flex justify-between items-start mb-2">
-                                                    <div className="font-medium text-lg">
-                                                        {detail.tower_id ||
-                                                            detail.towerId}
-                                                    </div>
-                                                    <RiskIndicator
-                                                        score={
-                                                            Math.round(
+                                        {predictions[selectedDay].towers.map(
+                                            (detail, index) => (
+                                                <div
+                                                    key={index}
+                                                    className="bg-gray-50 p-4 rounded-lg mb-3"
+                                                >
+                                                    <div className="flex justify-between items-start mb-2">
+                                                        <div className="font-medium text-lg">
+                                                            {detail.tower_id ||
+                                                                detail.towerId}
+                                                        </div>
+                                                        <RiskIndicator
+                                                            score={Math.round(
                                                                 detail.failure_probability *
                                                                     100,
-                                                            ) ||
-                                                            detail.riskScore
-                                                        }
-                                                    />
+                                                            )}
+                                                        />
+                                                    </div>
+                                                    <div className="grid grid-cols-2 gap-2 text-sm mb-3">
+                                                        <div>
+                                                            <span className="text-gray-500">
+                                                                Location:
+                                                            </span>{' '}
+                                                            {detail.location}
+                                                        </div>
+                                                        <div>
+                                                            <span className="text-gray-500">
+                                                                Failure Type:
+                                                            </span>{' '}
+                                                            {detail.failure_type
+                                                                ?.failure_type ||
+                                                                detail.failureType}
+                                                        </div>
+                                                        {detail.predictedTime && (
+                                                            <div className="flex items-center">
+                                                                <AlarmClock
+                                                                    size={14}
+                                                                    className="mr-1"
+                                                                />
+                                                                <span className="text-gray-500 mr-1">
+                                                                    Predicted
+                                                                    Time:
+                                                                </span>{' '}
+                                                                {
+                                                                    detail.predictedTime
+                                                                }
+                                                            </div>
+                                                        )}
+                                                        {detail.estimatedDowntime && (
+                                                            <div>
+                                                                <span className="text-gray-500">
+                                                                    Est.
+                                                                    Downtime:
+                                                                </span>{' '}
+                                                                {
+                                                                    detail.estimatedDowntime
+                                                                }
+                                                            </div>
+                                                        )}
+                                                        {detail.impactedUsers && (
+                                                            <div>
+                                                                <span className="text-gray-500">
+                                                                    Impacted
+                                                                    Users:
+                                                                </span>{' '}
+                                                                {detail.impactedUsers.toLocaleString()}
+                                                            </div>
+                                                        )}
+                                                        {detail.maintenanceWindow && (
+                                                            <div>
+                                                                <span className="text-gray-500">
+                                                                    Maintenance
+                                                                    Window:
+                                                                </span>{' '}
+                                                                {
+                                                                    detail.maintenanceWindow
+                                                                }
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    {detail.recommendation && (
+                                                        <div className="bg-blue-50 p-2 rounded border-l-4 border-blue-500 text-sm">
+                                                            <div className="font-medium text-blue-800 mb-1">
+                                                                Recommendation
+                                                            </div>
+                                                            {
+                                                                detail.recommendation
+                                                            }
+                                                        </div>
+                                                    )}
                                                 </div>
-                                                <div className="grid grid-cols-2 gap-2 text-sm mb-3">
-                                                    <div>
-                                                        <span className="text-gray-500">
-                                                            Location:
-                                                        </span>{' '}
-                                                        {detail.location}
-                                                    </div>
-                                                    <div>
-                                                        <span className="text-gray-500">
-                                                            Failure Type:
-                                                        </span>{' '}
-                                                        {detail.failure_type
-                                                            ?.failure_type ||
-                                                            detail.failureType}
-                                                    </div>
-                                                    {detail.predictedTime && (
-                                                        <div className="flex items-center">
-                                                            <AlarmClock
-                                                                size={14}
-                                                                className="mr-1"
-                                                            />
-                                                            <span className="text-gray-500 mr-1">
-                                                                Predicted Time:
-                                                            </span>{' '}
-                                                            {
-                                                                detail.predictedTime
-                                                            }
-                                                        </div>
-                                                    )}
-                                                    {detail.estimatedDowntime && (
-                                                        <div>
-                                                            <span className="text-gray-500">
-                                                                Est. Downtime:
-                                                            </span>{' '}
-                                                            {
-                                                                detail.estimatedDowntime
-                                                            }
-                                                        </div>
-                                                    )}
-                                                    {detail.impactedUsers && (
-                                                        <div>
-                                                            <span className="text-gray-500">
-                                                                Impacted Users:
-                                                            </span>{' '}
-                                                            {detail.impactedUsers.toLocaleString()}
-                                                        </div>
-                                                    )}
-                                                    {detail.maintenanceWindow && (
-                                                        <div>
-                                                            <span className="text-gray-500">
-                                                                Maintenance
-                                                                Window:
-                                                            </span>{' '}
-                                                            {
-                                                                detail.maintenanceWindow
-                                                            }
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                {detail.recommendation && (
-                                                    <div className="bg-blue-50 p-2 rounded border-l-4 border-blue-500 text-sm">
-                                                        <div className="font-medium text-blue-800 mb-1">
-                                                            Recommendation
-                                                        </div>
-                                                        {detail.recommendation}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ))}
+                                            ),
+                                        )}
                                     </div>
                                 </div>
                             )}
@@ -951,7 +1078,12 @@ export const ProjectDashboard = () => {
                 <div className="flex justify-center items-center h-64">
                     <div className="text-center">
                         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
-                        <p className="mt-4">Loading prediction data...</p>
+                        <p className="mt-4">
+                            Fetching next 3 days predictions...
+                        </p>
+                        <p className="text-sm text-gray-500">
+                            Current tower : {currentTower}, Day: {currentDay}
+                        </p>
                     </div>
                 </div>
             )}

@@ -1,4 +1,5 @@
 export const towersData = [
+    /*
     'TWR0100',
     'TWR0045',
     'TWR0186',
@@ -177,6 +178,7 @@ export const towersData = [
     'TWR0030',
     'TWR0029',
     'TWR0024',
+    */
     'TWR0099',
     'TWR0039',
     'TWR0090',
