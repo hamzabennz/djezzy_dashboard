@@ -36,7 +36,6 @@ import { format, eachDayOfInterval, startOfMonth, endOfMonth } from 'date-fns'
 import axios from 'axios'
 
 export const ProjectDashboard = () => {
-    console.log('towersData:', towersData)
     const [predictions, setPredictions] = useState<DailyPredictions>({})
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -70,6 +69,7 @@ export const ProjectDashboard = () => {
                     dateStr,
                 )
                 predictions.push(prediction)
+                console.log('Prediction pushed: ', prediction.predicted_failure)
             }
 
             // Filter only failed predictions
@@ -126,18 +126,19 @@ export const ProjectDashboard = () => {
             // Fetch all predictions in parallel
             for (const { towerId, location, date } of batchRequests) {
                 try {
-                    setCurrentTower(towerId) // Update current tower
-                    setCurrentDay(date) // Update current day
+                    setCurrentTower(towerId)
+                    setCurrentDay(date)
                     const prediction = await service.getPrediction(
                         towerId,
                         location,
                         date,
                     )
+
                     if (prediction.predicted_failure) {
                         if (!dailyPredictions[date]) {
                             dailyPredictions[date] = {
                                 count: 0,
-                                risk: 'low',
+                                risk: 'medium', // Always set to medium for yellow color
                                 towers: [],
                                 primaryType: '',
                             }
@@ -146,13 +147,7 @@ export const ProjectDashboard = () => {
                         const dayData = dailyPredictions[date]
                         dayData.count += 1
                         dayData.towers.push(prediction)
-                        dayData.risk = getRiskLevel(
-                            Math.max(
-                                ...dayData.towers.map(
-                                    (p) => p.failure_probability,
-                                ),
-                            ),
-                        )
+                        dayData.risk = 'medium' // Always set to medium for yellow color
                         dayData.primaryType = getMostCommonFailureType(
                             dayData.towers,
                         )
@@ -166,13 +161,13 @@ export const ProjectDashboard = () => {
             }
 
             setPredictions(dailyPredictions)
-            setSelectedDay(nextThreeDays[0]) // Automatically select the first day
+            setSelectedDay(nextThreeDays[0])
         } catch (err) {
             setError('Failed to fetch predictions')
             console.error(err)
         } finally {
-            setCurrentTower(null) // Clear current tower after loading
-            setCurrentDay(null) // Clear current day after loading
+            setCurrentTower(null)
+            setCurrentDay(null)
             setIsLoading(false)
         }
     }
@@ -215,18 +210,10 @@ export const ProjectDashboard = () => {
                 <div className="text-right text-sm">{dayObj.day}</div>
                 {prediction && (
                     <div className="flex-1 flex flex-col items-center justify-center mt-1">
-                        <div
-                            className={`
-                            w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold
-                            ${prediction.risk === 'low' ? 'bg-green-500' : ''}
-                            ${prediction.risk === 'medium' ? 'bg-yellow-500' : ''}
-                            ${prediction.risk === 'high' ? 'bg-orange-500' : ''}
-                            ${prediction.risk === 'critical' ? 'bg-red-500' : ''}
-                        `}
-                        >
+                        <div className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold mb-2 bg-yellow-500">
                             {prediction.count}
                         </div>
-                        <div className="text-xs text-center mt-1 truncate w-full">
+                        <div className="text-xs text-center truncate w-full">
                             {prediction.primaryType}
                         </div>
                     </div>
@@ -537,32 +524,20 @@ export const ProjectDashboard = () => {
     )
 
     const RiskIndicator = ({ score }) => {
-        let color = 'bg-green-500'
-        if (score > 60) color = 'bg-yellow-500'
-        if (score > 75) color = 'bg-orange-500'
-        if (score > 85) color = 'bg-red-500'
-
+        // Always return yellow regardless of score
         return (
             <div className="flex items-center">
-                <div className={`w-3 h-3 rounded-full ${color} mr-2`}></div>
+                <div className="w-3 h-3 rounded-full bg-yellow-500 mr-2"></div>
                 <span>{score}%</span>
             </div>
         )
     }
 
     const RiskBadge = ({ risk }) => {
-        const colorMap = {
-            low: 'bg-green-100 text-green-800',
-            medium: 'bg-yellow-100 text-yellow-800',
-            high: 'bg-orange-100 text-orange-800',
-            critical: 'bg-red-100 text-red-800',
-        }
-
+        // Always return yellow styling
         return (
-            <span
-                className={`px-2 py-1 rounded-full text-xs font-medium ${colorMap[risk]}`}
-            >
-                {risk.charAt(0).toUpperCase() + risk.slice(1)}
+            <span className="px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                Medium
             </span>
         )
     }

@@ -172,13 +172,14 @@ export const towersData = [
     'TWR0066',
     'TWR0193',
     'TWR0188',
+      */
     'TWR0180',
     'TWR0032',
     'TWR0077',
     'TWR0030',
     'TWR0029',
     'TWR0024',
-    */
+
     'TWR0099',
     'TWR0039',
     'TWR0090',

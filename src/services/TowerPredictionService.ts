@@ -2,7 +2,7 @@ import axios from 'axios'
 import { TowerPredictionResponse } from '../types/prediction'
 
 export class TowerPredictionService {
-    private readonly baseUrl = 'http://172.20.10.8:8000'
+    private readonly baseUrl = 'http://192.168.0.102:8000'
 
     async getPrediction(
         towerId: string,
@@ -23,7 +23,6 @@ export class TowerPredictionService {
                     },
                 },
             )
-            console.log('Prediction response:', response.data)
             return response.data
         } catch (error) {
             throw new Error(`Failed to fetch tower prediction: ${error}`)
@@ -43,7 +42,6 @@ export class TowerPredictionService {
                     },
                 },
             )
-            console.log('Batch prediction response:', response.data)
             return response.data
         } catch (error) {
             throw new Error(`Failed to fetch batch predictions: ${error}`)

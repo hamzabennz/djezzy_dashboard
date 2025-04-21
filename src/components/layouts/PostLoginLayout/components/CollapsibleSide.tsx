@@ -36,7 +36,7 @@ const CollapsibleSide = ({ children }: CommonProps) => {
                             <>
                                 <Notification />
 
-                                <UserProfileDropdown hoverable={false} />
+                                {/* <UserProfileDropdown hoverable={false} /> */}
                             </>
                         }
                     />

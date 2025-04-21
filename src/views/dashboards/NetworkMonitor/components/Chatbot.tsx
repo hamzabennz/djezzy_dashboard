@@ -1,84 +1,93 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { MessageSquare, X, CornerDownLeft, Loader } from 'lucide-react';
-import { useTower } from '../context/TowerContext';
+import React, { useState, useRef, useEffect } from 'react'
+import { MessageSquare, X, CornerDownLeft, Loader } from 'lucide-react'
+import { useTower } from '../context/TowerContext'
 
 // Import the API utils
-import { queryNetworkMonitorAI, Message } from '../utils/chatApi';
+import { queryNetworkMonitorAI, Message } from '../utils/chatApi'
+import ReactMarkdown from 'react-markdown' // Add this import
+
+// Add this formatting function before the component
+const formatMessage = (content: string) => {
+    // Remove extra newlines and spaces
+    return content.trim().replace(/\n{3,}/g, '\n\n')
+}
 
 const Chatbot: React.FC = () => {
-    const { towers } = useTower();
-    const [isOpen, setIsOpen] = useState(false);
+    const { towers } = useTower()
+    const [isOpen, setIsOpen] = useState(false)
     const [messages, setMessages] = useState<Message[]>([
         {
             role: 'model',
-            content: "Hello! I'm NetTowerGuard AI. How can I help you with tower monitoring today?"
+            content:
+                "Hello! I'm NetTowerGuard AI. How can I help you with tower monitoring today?",
         },
-    ]);
-    const [inputValue, setInputValue] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
-    const messagesEndRef = useRef<HTMLDivElement>(null);
+    ])
+    const [inputValue, setInputValue] = useState('')
+    const [isLoading, setIsLoading] = useState(false)
+    const messagesEndRef = useRef<HTMLDivElement>(null)
 
     // Auto-scroll to the bottom of messages
     useEffect(() => {
         if (messagesEndRef.current) {
-            messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+            messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
         }
-    }, [messages]);
+    }, [messages])
 
     const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+        e.preventDefault()
 
-        if (!inputValue.trim()) return;
+        if (!inputValue.trim()) return
 
         // Add user message
         const userMessage: Message = {
             role: 'user',
-            content: inputValue
-        };
+            content: inputValue,
+        }
 
-        setMessages((prev) => [...prev, userMessage]);
-        setInputValue('');
-        setIsLoading(true);
+        setMessages((prev) => [...prev, userMessage])
+        setInputValue('')
+        setIsLoading(true)
 
         try {
             // Get response from AI with conversation history for context
             const aiResponse = await queryNetworkMonitorAI(
                 inputValue,
                 towers,
-                messages
-            );
+                messages,
+            )
 
             // Add AI response to the messages
             setMessages((prev) => [
                 ...prev,
-                { role: 'model', content: aiResponse }
-            ]);
+                { role: 'model', content: aiResponse },
+            ])
         } catch (error) {
-            console.error('Error getting AI response:', error);
+            console.error('Error getting AI response:', error)
             setMessages((prev) => [
                 ...prev,
                 {
                     role: 'model',
-                    content: 'Sorry, I encountered an error processing your request. Please try again.'
-                }
-            ]);
+                    content:
+                        'Sorry, I encountered an error processing your request. Please try again.',
+                },
+            ])
         } finally {
-            setIsLoading(false);
+            setIsLoading(false)
         }
-    };
+    }
 
     // Handle quick action suggestions
     const handleSuggestion = (suggestion: string) => {
-        setInputValue(suggestion);
-    };
+        setInputValue(suggestion)
+    }
 
     // Suggested prompts
     const suggestions = [
-        "Summarize the current network status",
-        "Which towers need urgent maintenance?",
-        "Predict potential failures in the next 24 hours",
+        'Summarize the current network status',
+        'Which towers need urgent maintenance?',
+        'Predict potential failures in the next 24 hours',
         "What's causing most tower failures?",
-    ];
+    ]
 
     return (
         <>
@@ -108,24 +117,73 @@ const Chatbot: React.FC = () => {
                         </button>
                     </div>
 
-                    {/* Messages */}
+                    {/* Updated Messages section */}
                     <div className="p-3 flex-1 overflow-y-auto max-h-96 flex flex-col gap-3">
                         {messages.map((message, i) => (
                             <div
                                 key={i}
-                                className={`p-2 rounded-lg text-sm ${message.role === 'user'
-                                    ? 'bg-primary text-white ml-auto'
-                                    : 'bg-gray-100 text-gray-800 mr-auto'
-                                    } max-w-[80%]`}
+                                className={`p-3 rounded-lg text-sm ${
+                                    message.role === 'user'
+                                        ? 'bg-primary text-white ml-auto'
+                                        : 'bg-gray-100 text-gray-800 mr-auto'
+                                } max-w-[85%]`}
                             >
-                                {message.content}
+                                <ReactMarkdown
+                                    className={`prose ${
+                                        message.role === 'user'
+                                            ? 'prose-invert'
+                                            : 'prose-gray'
+                                    } max-w-none text-sm`}
+                                    components={{
+                                        // Style for code blocks
+                                        code: ({
+                                            node,
+                                            inline,
+                                            className,
+                                            children,
+                                            ...props
+                                        }) => (
+                                            <code
+                                                className={`${className} ${
+                                                    inline
+                                                        ? 'bg-gray-200 dark:bg-gray-700 px-1 py-0.5 rounded'
+                                                        : 'block bg-gray-800 text-gray-100 p-2 rounded-md'
+                                                }`}
+                                                {...props}
+                                            >
+                                                {children}
+                                            </code>
+                                        ),
+                                        // Style for lists
+                                        ul: ({ children }) => (
+                                            <ul className="list-disc pl-4 my-2">
+                                                {children}
+                                            </ul>
+                                        ),
+                                        // Style for links
+                                        a: ({ children, href }) => (
+                                            <a
+                                                href={href}
+                                                className="text-blue-500 hover:underline"
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                            >
+                                                {children}
+                                            </a>
+                                        ),
+                                    }}
+                                >
+                                    {formatMessage(message.content)}
+                                </ReactMarkdown>
                             </div>
                         ))}
 
                         {isLoading && (
                             <div className="bg-gray-100 p-2 rounded-lg flex items-center gap-2 text-sm mr-auto">
                                 <Loader className="h-4 w-4 animate-spin text-primary" />
-                                <span className="text-gray-800">Processing your request...</span>
+                                <span className="text-gray-800">
+                                    Processing your request...
+                                </span>
                             </div>
                         )}
                         <div ref={messagesEndRef} />
@@ -134,13 +192,17 @@ const Chatbot: React.FC = () => {
                     {/* Suggested queries - shown when conversation is new */}
                     {messages.length <= 1 && !isLoading && (
                         <div className="px-3 pb-2">
-                            <p className="text-xs text-gray-500 mb-2">Try asking:</p>
+                            <p className="text-xs text-gray-500 mb-2">
+                                Try asking:
+                            </p>
                             <div className="flex flex-wrap gap-2">
                                 {suggestions.map((suggestion, i) => (
                                     <button
                                         key={i}
                                         className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded-md"
-                                        onClick={() => handleSuggestion(suggestion)}
+                                        onClick={() =>
+                                            handleSuggestion(suggestion)
+                                        }
                                     >
                                         {suggestion}
                                     </button>
@@ -172,7 +234,7 @@ const Chatbot: React.FC = () => {
                 </div>
             )}
         </>
-    );
-};
+    )
+}
 
-export default Chatbot;
+export default Chatbot
